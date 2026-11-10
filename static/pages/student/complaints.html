@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance Grievances — AttendEase</title>
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/layout.css">
+</head>
+<body>
+
+  <div class="app-wrapper">
+    <aside class="sidebar" id="appSidebar"></aside>
+
+    <div class="main-wrapper">
+      <header class="top-navbar" id="topNavbar"></header>
+
+      <main class="page-container">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h1 class="h4 mb-1">Attendance Grievance & Correction Portal</h1>
+            <p class="text-muted small mb-0">Submit formal dispute requests with documentation for faculty review.</p>
+          </div>
+          <button class="btn btn-burgundy btn-sm" data-bs-toggle="modal" data-bs-target="#newComplaintModal">
+            <i class="fa-solid fa-plus me-1"></i> New Grievance
+          </button>
+        </div>
+
+        <!-- Grievances Tracking Glass Table -->
+        <div class="glass-table-container">
+          <div class="p-3 border-bottom border-light border-opacity-10 d-flex justify-content-between align-items-center">
+            <h2 class="h6 mb-0 text-white"><i class="fa-solid fa-list-check me-2 text-muted"></i>My Grievances Tracker</h2>
+            <span class="text-muted small" id="grievanceCount">Loading...</span>
+          </div>
+          <div class="table-responsive">
+            <table class="glass-table">
+              <thead>
+                <tr>
+                  <th>Subject</th>
+                  <th>Session Date</th>
+                  <th>Requested Change</th>
+                  <th>Reason</th>
+                  <th>Status</th>
+                  <th>Faculty Remarks</th>
+                  <th>Submitted</th>
+                </tr>
+              </thead>
+              <tbody id="grievanceTableBody">
+                <tr><td colspan="7" class="text-center py-4 text-muted"><div class="skeleton-row w-75 mx-auto"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- New Grievance Modal -->
+  <div class="modal fade" id="newComplaintModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title h6 text-white"><i class="fa-solid fa-file-signature me-2 text-rose"></i>Submit Attendance Grievance</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="grievanceForm">
+          <div class="modal-body">
+            <input type="hidden" id="complaintAttendanceId">
+
+            <div class="mb-3">
+              <label class="form-label" for="complaintSubject">Course / Subject</label>
+              <select class="form-select" id="complaintSubject" required>
+                <option value="">Select Course</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="complaintDate">Date of Lecture</label>
+              <input type="date" class="form-control" id="complaintDate" required>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label class="form-label">Marked Status</label>
+                <select class="form-select" id="complaintCurrentStatus">
+                  <option value="ABSENT" selected>ABSENT</option>
+                  <option value="PRESENT">PRESENT</option>
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label">Requested Status</label>
+                <select class="form-select" id="complaintRequestedStatus">
+                  <option value="PRESENT" selected>PRESENT</option>
+                  <option value="ABSENT">ABSENT</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="complaintReason">Reason / Justification</label>
+              <textarea class="form-control" id="complaintReason" rows="3" placeholder="Explain the discrepancy (e.g. medical leave, technical biometric timeout, college event duty)..." required></textarea>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="complaintDocument">Attach Certificate / Proof (PDF, JPG, PNG)</label>
+              <input type="file" class="form-control" id="complaintDocument" accept=".pdf,image/jpeg,image/png">
+              <small class="text-muted" style="font-size: 0.75rem;">Max file size 10MB.</small>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-glass btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-burgundy btn-sm" id="submitGrievanceBtn">Submit Grievance</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    let modalInstance = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await AppLayout.init('complaints', 'STUDENT');
+      modalInstance = new bootstrap.Modal(document.getElementById('newComplaintModal'));
+      await loadSubjectOptions();
+      loadGrievances();
+
+      // Check query params if arrived from History dispute link
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('subjectId')) {
+        document.getElementById('complaintSubject').value = urlParams.get('subjectId');
+      }
+      if (urlParams.get('date')) {
+        document.getElementById('complaintDate').value = urlParams.get('date');
+      }
+      if (urlParams.get('attendanceId')) {
+        document.getElementById('complaintAttendanceId').value = urlParams.get('attendanceId');
+        modalInstance.show();
+      }
+    });
+
+    async function loadSubjectOptions() {
+      try {
+        const res = await fetch('/api/student/dashboard');
+        if (!res.ok) return;
+        const data = await res.json();
+        const sel = document.getElementById('complaintSubject');
+        data.subjectStats.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.subjectId;
+          opt.textContent = `${s.subjectName} (${s.subjectCode})`;
+          sel.appendChild(opt);
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function loadGrievances() {
+      try {
+        const res = await fetch('/api/student/complaints');
+        if (!res.ok) throw new Error('Failed to load grievances');
+        const list = await res.json();
+
+        document.getElementById('grievanceCount').textContent = `${list.length} Request${list.length === 1 ? '' : 's'}`;
+
+        const tbody = document.getElementById('grievanceTableBody');
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No attendance grievances submitted yet.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = list.map(g => {
+          let badgeClass = 'badge-status-yellow';
+          if (g.status === 'APPROVED') badgeClass = 'badge-status-green';
+          if (g.status === 'REJECTED') badgeClass = 'badge-status-red';
+          if (g.status === 'PENDING') badgeClass = 'badge-status-info';
+
+          return `
+            <tr>
+              <td>
+                <div class="fw-bold text-white">${g.subjectName}</div>
+                <small class="text-muted">${g.subjectCode}</small>
+              </td>
+              <td>${new Date(g.date).toLocaleDateString()}</td>
+              <td>
+                <span class="badge ${g.currentStatus === 'PRESENT' ? 'badge-status-green' : 'badge-status-red'}">${g.currentStatus}</span>
+                <i class="fa-solid fa-arrow-right mx-1 text-muted" style="font-size: 0.75rem;"></i>
+                <span class="badge ${g.requestedStatus === 'PRESENT' ? 'badge-status-green' : 'badge-status-red'}">${g.requestedStatus}</span>
+              </td>
+              <td style="max-width: 250px;">
+                <div class="text-truncate" title="${g.reason}">${g.reason}</div>
+              </td>
+              <td>
+                <span class="badge ${badgeClass}">${g.status}</span>
+              </td>
+              <td>
+                <div class="small ${g.facultyRemarks ? 'text-light' : 'text-muted'}">${g.facultyRemarks || 'Pending review'}</div>
+                ${g.reviewedByName ? `<small class="text-muted">By: ${g.reviewedByName}</small>` : ''}
+              </td>
+              <td>
+                <small class="text-muted">${new Date(g.createdAt).toLocaleDateString()}</small>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+      } catch (e) {
+        console.error(e);
+        AppLayout.showToast('Could not load grievances list', 'error');
+      }
+    }
+
+    document.getElementById('grievanceForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const btn = document.getElementById('submitGrievanceBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Submitting...';
+
+      const formData = new FormData();
+      formData.append('subjectId', document.getElementById('complaintSubject').value);
+      formData.append('date', document.getElementById('complaintDate').value);
+      formData.append('currentStatus', document.getElementById('complaintCurrentStatus').value);
+      formData.append('requestedStatus', document.getElementById('complaintRequestedStatus').value);
+      formData.append('reason', document.getElementById('complaintReason').value);
+
+      const attId = document.getElementById('complaintAttendanceId').value;
+      if (attId) formData.append('attendanceId', attId);
+
+      const fileInput = document.getElementById('complaintDocument');
+      if (fileInput.files.length > 0) {
+        formData.append('document', fileInput.files[0]);
+      }
+
+      try {
+        const res = await fetch('/api/student/complaints', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (res.ok) {
+          AppLayout.showToast('Attendance grievance submitted successfully', 'success');
+          modalInstance.hide();
+          document.getElementById('grievanceForm').reset();
+          loadGrievances();
+        } else {
+          const err = await res.json();
+          AppLayout.showToast(err.message || 'Submission failed', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        AppLayout.showToast('Error communicating with server', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Submit Grievance';
+      }
+    });
+  </script>
+</body>
+</html>
+

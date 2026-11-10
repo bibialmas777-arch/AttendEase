@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Institution Analytics — AttendEase</title>
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/layout.css">
+</head>
+<body>
+
+  <div class="app-wrapper">
+    <aside class="sidebar" id="appSidebar"></aside>
+
+    <div class="main-wrapper">
+      <header class="top-navbar" id="topNavbar"></header>
+
+      <main class="page-container">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+          <div>
+            <h1 class="h4 mb-1">Attendance Intelligence & Analytics</h1>
+            <p class="text-muted small mb-0">Cohort trends, course comparisons, and compliance analytics backed by Java JPQL aggregates.</p>
+          </div>
+          <a href="/pages/admin/reports.html" class="btn btn-burgundy btn-sm">
+            <i class="fa-solid fa-file-pdf me-1"></i> Export Official Reports
+          </a>
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="glass-card mb-4" style="padding: 1.25rem;">
+          <form id="analyticsFilterForm" class="row g-3 align-items-end">
+            <div class="col-12 col-md-4">
+              <label class="form-label">Filter by Class</label>
+              <select class="form-select" id="classFilterSelect">
+                <option value="">All Academic Classes</option>
+              </select>
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label">Filter by Section</label>
+              <select class="form-select" id="sectionFilterSelect">
+                <option value="">All Sections</option>
+              </select>
+            </div>
+            <div class="col-12 col-md-4 d-flex gap-2">
+              <button type="submit" class="btn btn-burgundy w-100">
+                <i class="fa-solid fa-chart-simple me-1"></i> Refresh Analytics
+              </button>
+              <button type="button" class="btn btn-glass" id="resetBtn">
+                <i class="fa-solid fa-rotate-right"></i>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Top Metric Summary Grid -->
+        <div class="row g-3 mb-4">
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card h-100">
+              <div class="stat-label">Overall Cohort Attendance</div>
+              <div class="stat-value text-success" id="overallPctVal">-</div>
+              <div class="stat-subtext">Weighted present percentage</div>
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card h-100">
+              <div class="stat-label">Total Student Sessions</div>
+              <div class="stat-value text-white" id="totalRecordsVal">-</div>
+              <div class="stat-subtext">Historical data points</div>
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card h-100">
+              <div class="stat-label">Present Count</div>
+              <div class="stat-value text-light" id="totalPresentVal">-</div>
+              <div class="stat-subtext">Verified attending student-sessions</div>
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card h-100">
+              <div class="stat-label">Absent Count</div>
+              <div class="stat-value text-danger" id="totalAbsentVal">-</div>
+              <div class="stat-subtext">Unexcused / missed student-sessions</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Grid (Burgundy Glass Palette) -->
+        <div class="row g-4 mb-4">
+          <!-- Monthly Attendance Trend Line Chart -->
+          <div class="col-12 col-xl-8">
+            <div class="glass-card h-100 d-flex flex-column">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h6 mb-0 text-white"><i class="fa-solid fa-chart-line me-2 text-muted"></i>Monthly Attendance Trajectory</h2>
+                <span class="badge badge-status-info">Monthly Aggregates</span>
+              </div>
+              <div class="flex-grow-1" style="min-height: 280px;">
+                <canvas id="monthlyTrendChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Present vs Absent Ratio Doughnut Chart -->
+          <div class="col-12 col-xl-4">
+            <div class="glass-card h-100 d-flex flex-column">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h6 mb-0 text-white"><i class="fa-solid fa-chart-pie me-2 text-muted"></i>Present vs Absent</h2>
+              </div>
+              <div class="flex-grow-1 d-flex align-items-center justify-content-center" style="min-height: 280px;">
+                <canvas id="doughnutChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Course Comparison Bar Chart -->
+        <div class="glass-card mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h6 mb-0 text-white"><i class="fa-solid fa-chart-column me-2 text-muted"></i>Course Attendance Averages</h2>
+          </div>
+          <div style="min-height: 280px;">
+            <canvas id="coursesBarChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Defaulters Cohort Table -->
+        <div class="glass-table-container">
+          <div class="p-3 border-bottom border-light border-opacity-10 d-flex justify-content-between align-items-center">
+            <h2 class="h6 mb-0 text-white"><i class="fa-solid fa-user-slash me-2 text-danger"></i>Students Under Regulatory Minimum</h2>
+            <span class="text-muted small" id="defaulterCount">Loading...</span>
+          </div>
+          <div class="table-responsive">
+            <table class="glass-table">
+              <thead>
+                <tr>
+                  <th>Roll No</th>
+                  <th>Student Name</th>
+                  <th>Class</th>
+                  <th>Section</th>
+                  <th>Conducted</th>
+                  <th>Attended</th>
+                  <th>Percentage</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="defaultersTableBody">
+                <tr><td colspan="8" class="text-center py-4 text-muted"><div class="skeleton-row w-75 mx-auto"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <script src="/js/chartTheme.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    let monthlyChartInstance = null;
+    let doughnutChartInstance = null;
+    let courseChartInstance = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await AppLayout.init('analytics', 'ADMIN');
+      await loadFilterDropdowns();
+      loadAnalytics();
+
+      document.getElementById('classFilterSelect').addEventListener('change', async (e) => {
+        await loadSectionsForClass(e.target.value);
+      });
+    });
+
+    async function loadFilterDropdowns() {
+      try {
+        const res = await fetch('/api/admin/classes');
+        const classes = await res.json();
+        const sel = document.getElementById('classFilterSelect');
+        classes.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = `${c.name} (${c.code})`;
+          sel.appendChild(opt);
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function loadSectionsForClass(classId) {
+      const secSel = document.getElementById('sectionFilterSelect');
+      if (!classId) {
+        secSel.innerHTML = '<option value="">All Sections</option>';
+        return;
+      }
+      try {
+        const res = await fetch(`/api/admin/sections?classId=${classId}`);
+        const sections = await res.json();
+        secSel.innerHTML = '<option value="">All Sections</option>' + 
+          sections.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function loadAnalytics() {
+      const classId = document.getElementById('classFilterSelect').value;
+      const sectionId = document.getElementById('sectionFilterSelect').value;
+
+      const params = new URLSearchParams();
+      if (classId) params.append('classId', classId);
+      if (sectionId) params.append('sectionId', sectionId);
+
+      try {
+        const res = await fetch(`/api/admin/analytics?${params.toString()}`);
+        if (!res.ok) throw new Error('Failed to load analytics');
+        const data = await res.json();
+
+        document.getElementById('overallPctVal').textContent = `${data.overallPercentage.toFixed(1)}%`;
+        document.getElementById('totalRecordsVal').textContent = data.totalRecords;
+        document.getElementById('totalPresentVal').textContent = data.totalPresent;
+        document.getElementById('totalAbsentVal').textContent = data.totalAbsent;
+
+        renderMonthlyChart(data.monthlyTrendLabels, data.monthlyTrendPercentages);
+        renderDoughnutChart(data.totalPresent, data.totalAbsent);
+        renderCourseBarChart(data.subjectComparisonLabels, data.subjectComparisonPercentages);
+
+        // Defaulters table
+        document.getElementById('defaulterCount').textContent = `${data.defaultersList.length} Defaulters`;
+        const tbody = document.getElementById('defaultersTableBody');
+        if (data.defaultersList.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-success">Compliant: No students under regulatory threshold in this cohort!</td></tr>';
+        } else {
+          tbody.innerHTML = data.defaultersList.map(d => `
+            <tr>
+              <td><strong class="text-white">${d.rollNo}</strong></td>
+              <td>${d.name}</td>
+              <td>${d.className}</td>
+              <td>${d.sectionName}</td>
+              <td>${d.conducted}</td>
+              <td>${d.attended}</td>
+              <td><strong class="text-danger">${d.percentage.toFixed(1)}%</strong></td>
+              <td><span class="badge badge-status-red">${d.status}</span></td>
+            </tr>
+          `).join('');
+        }
+
+      } catch (e) {
+        console.error(e);
+        AppLayout.showToast('Could not load analytics metrics', 'error');
+      }
+    }
+
+    function renderMonthlyChart(labels, values) {
+      const ctx = document.getElementById('monthlyTrendChart');
+      if (!ctx) return;
+      if (monthlyChartInstance) monthlyChartInstance.destroy();
+
+      monthlyChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Attendance %',
+            data: values,
+            borderColor: '#C47A91',
+            backgroundColor: 'rgba(143, 48, 79, 0.15)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.35,
+            pointBackgroundColor: '#FFF7F8',
+            pointBorderColor: '#8F304F',
+            pointRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              grid: { color: 'rgba(255, 255, 255, 0.08)' }
+            },
+            x: {
+              grid: { color: 'rgba(255, 255, 255, 0.04)' }
+            }
+          }
+        }
+      });
+    }
+
+    function renderDoughnutChart(present, absent) {
+      const ctx = document.getElementById('doughnutChart');
+      if (!ctx) return;
+      if (doughnutChartInstance) doughnutChartInstance.destroy();
+
+      doughnutChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Present Sessions', 'Absent Sessions'],
+          datasets: [{
+            data: [present, absent],
+            backgroundColor: ['#75C9A3', '#F07889'],
+            borderColor: 'rgba(38, 11, 24, 0.9)',
+            borderWidth: 3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom' }
+          },
+          cutout: '72%'
+        }
+      });
+    }
+
+    function renderCourseBarChart(labels, values) {
+      const ctx = document.getElementById('coursesBarChart');
+      if (!ctx) return;
+      if (courseChartInstance) courseChartInstance.destroy();
+
+      courseChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Course Average %',
+            data: values,
+            backgroundColor: '#8F304F',
+            hoverBackgroundColor: '#a4385b',
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              grid: { color: 'rgba(255, 255, 255, 0.08)' }
+            },
+            x: {
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    document.getElementById('analyticsFilterForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      loadAnalytics();
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      document.getElementById('classFilterSelect').value = '';
+      document.getElementById('sectionFilterSelect').value = '';
+      loadAnalytics();
+    });
+  </script>
+</body>
+</html>
+

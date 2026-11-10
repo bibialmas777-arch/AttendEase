@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recovery Planner — AttendEase</title>
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/layout.css">
+</head>
+<body>
+
+  <div class="app-wrapper">
+    <aside class="sidebar" id="appSidebar"></aside>
+
+    <div class="main-wrapper">
+      <header class="top-navbar" id="topNavbar"></header>
+
+      <main class="page-container">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h1 class="h4 mb-1">Attendance Recovery Planner</h1>
+            <p class="text-muted small mb-0">Simulate consecutive sessions needed to reach or maintain mandatory threshold.</p>
+          </div>
+        </div>
+
+        <div class="row g-4">
+          <!-- Planner Input Form -->
+          <div class="col-12 col-lg-5">
+            <div class="glass-card">
+              <h2 class="h6 mb-3 text-white"><i class="fa-solid fa-sliders me-2 text-muted"></i>Planner Parameters</h2>
+              
+              <form id="recoveryForm">
+                <div class="mb-3">
+                  <label class="form-label" for="subjectSelect">Select Scope</label>
+                  <select class="form-select" id="subjectSelect">
+                    <option value="">Overall Attendance</option>
+                  </select>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Target Attendance Percentage</label>
+                  <div class="d-flex gap-2 mb-2">
+                    <button type="button" class="btn btn-sm btn-glass flex-fill target-btn" data-target="75">75% (Min)</button>
+                    <button type="button" class="btn btn-sm btn-glass flex-fill target-btn" data-target="80">80%</button>
+                    <button type="button" class="btn btn-sm btn-glass flex-fill target-btn" data-target="85">85%</button>
+                  </div>
+                  <div class="input-group">
+                    <input type="number" class="form-control" id="customTargetInput" min="1" max="100" value="75" placeholder="Custom %" required>
+                    <span class="input-group-text">%</span>
+                  </div>
+                  <small class="text-muted" style="font-size: 0.78rem;">The statutory university minimum requirement is 75%.</small>
+                </div>
+
+                <button type="submit" class="btn btn-burgundy w-100 py-2" id="calcBtn">
+                  <i class="fa-solid fa-calculator me-1"></i> Calculate Trajectory
+                </button>
+              </form>
+            </div>
+
+            <!-- Mathematical Formula Disclosure Card -->
+            <div class="glass-card mt-3" style="padding: 1.25rem;">
+              <h3 class="h6 mb-2 text-white" style="font-size: 0.85rem;"><i class="fa-solid fa-square-root-variable me-2 text-muted"></i>Backend Mathematical Model</h3>
+              <p class="text-muted mb-0" style="font-size: 0.8rem; line-height: 1.5;">
+                Computed in Java with integer ceiling arithmetic: 
+                <code>x = max(0, ceil((t·C - 100·A) / (100 - t)))</code>.
+                Safe skippable classes: 
+                <code>m = max(0, floor((100·A - t·C) / t))</code>.
+              </p>
+            </div>
+          </div>
+
+          <!-- Planner Result Card -->
+          <div class="col-12 col-lg-7">
+            <div class="glass-card h-100 d-flex flex-column justify-content-between" id="resultCard">
+              <div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h2 class="h6 mb-0 text-white"><i class="fa-solid fa-compass-drafting me-2 text-muted"></i>Recovery Trajectory</h2>
+                  <span class="badge badge-status-info" id="resultStatusBadge">Ready</span>
+                </div>
+
+                <!-- Guidance Message Banner -->
+                <div id="resultMessageAlert" class="alert-glass alert-glass-warning mb-4">
+                  <i class="fa-solid fa-circle-info" style="font-size: 1.3rem;"></i>
+                  <div id="resultMessageText" class="small">
+                    Select scope and target percentage, then click "Calculate Trajectory".
+                  </div>
+                </div>
+
+                <!-- Numerical Result Cards -->
+                <div class="row g-3 mb-4">
+                  <div class="col-12 col-sm-6">
+                    <div class="p-3 rounded-3" style="background: rgba(255, 255, 255, 0.04); border: 1px solid var(--glass-border);">
+                      <div class="stat-label">Consecutive Classes Needed</div>
+                      <div class="stat-value text-danger" id="consecutiveNeededVal">-</div>
+                      <div class="stat-subtext">Must attend without missing any</div>
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-sm-6">
+                    <div class="p-3 rounded-3" style="background: rgba(255, 255, 255, 0.04); border: 1px solid var(--glass-border);">
+                      <div class="stat-label">Safe Skippable Classes</div>
+                      <div class="stat-value text-success" id="safeMissesVal">-</div>
+                      <div class="stat-subtext">Allowed to miss while remaining &ge; target</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Current vs Projected Stats -->
+                <div class="row g-3">
+                  <div class="col-6 col-md-3">
+                    <div class="text-muted small">Current Total</div>
+                    <div class="fw-bold text-white fs-6" id="currentStatsVal">-</div>
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <div class="text-muted small">Current Percentage</div>
+                    <div class="fw-bold text-white fs-6" id="currentPctVal">-</div>
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <div class="text-muted small">Target Goal</div>
+                    <div class="fw-bold text-white fs-6" id="targetPctVal">-</div>
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <div class="text-muted small">Expected Final %</div>
+                    <div class="fw-bold text-white fs-6" id="expectedPctVal">-</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action button to view calendar history -->
+              <div class="mt-4 pt-3 border-top border-light border-opacity-10 d-flex justify-content-between align-items-center">
+                <span class="text-muted small">Need an excused absence reviewed?</span>
+                <a href="/pages/student/complaints.html" class="btn btn-sm btn-glass">
+                  <i class="fa-solid fa-file-shield me-1"></i> Submit Grievance
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await AppLayout.init('recovery', 'STUDENT');
+      await loadSubjectOptions();
+
+      // Check query parameter (e.g. ?subjectId=1)
+      const urlParams = new URLSearchParams(window.location.search);
+      const subIdParam = urlParams.get('subjectId');
+      if (subIdParam) {
+        document.getElementById('subjectSelect').value = subIdParam;
+      }
+
+      // Initial calculation
+      calculate();
+    });
+
+    // Preset buttons
+    document.querySelectorAll('.target-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = btn.getAttribute('data-target');
+        document.getElementById('customTargetInput').value = val;
+        calculate();
+      });
+    });
+
+    document.getElementById('recoveryForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      calculate();
+    });
+
+    async function loadSubjectOptions() {
+      try {
+        const res = await fetch('/api/student/dashboard');
+        if (!res.ok) return;
+        const data = await res.json();
+        const sel = document.getElementById('subjectSelect');
+        data.subjectStats.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.subjectId;
+          opt.textContent = `${s.subjectName} (${s.subjectCode}) — ${s.percentage.toFixed(1)}%`;
+          sel.appendChild(opt);
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function calculate() {
+      const subjectIdVal = document.getElementById('subjectSelect').value;
+      const targetPctVal = parseInt(document.getElementById('customTargetInput').value);
+
+      if (isNaN(targetPctVal) || targetPctVal < 1 || targetPctVal > 100) {
+        AppLayout.showToast('Please enter a target percentage between 1 and 100', 'warning');
+        return;
+      }
+
+      const payload = {
+        subjectId: subjectIdVal ? parseInt(subjectIdVal) : null,
+        targetPercentage: targetPctVal
+      };
+
+      try {
+        const res = await fetch('/api/student/recovery', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          AppLayout.showToast(err.message || 'Calculation error', 'error');
+          return;
+        }
+
+        const data = await res.json();
+
+        // Update UI with Java calculation output
+        document.getElementById('consecutiveNeededVal').textContent = data.consecutiveNeeded;
+        document.getElementById('safeMissesVal').textContent = data.safeMisses;
+        document.getElementById('currentStatsVal').textContent = `${data.attendedClasses} / ${data.conductedClasses}`;
+        document.getElementById('currentPctVal').textContent = `${data.currentPercentage.toFixed(1)}%`;
+        document.getElementById('targetPctVal').textContent = `${data.targetPercentage}%`;
+        document.getElementById('expectedPctVal').textContent = `${data.expectedPercentageAfterConsecutive.toFixed(1)}%`;
+        document.getElementById('resultMessageText').textContent = data.message;
+
+        const badge = document.getElementById('resultStatusBadge');
+        const alertBox = document.getElementById('resultMessageAlert');
+
+        badge.textContent = data.statusColor;
+        badge.className = `badge badge-status-${data.statusColor.toLowerCase()}`;
+
+        alertBox.className = `alert-glass alert-glass-${data.statusColor === 'GREEN' ? 'success' : (data.statusColor === 'YELLOW' ? 'warning' : 'danger')}`;
+
+      } catch (e) {
+        console.error(e);
+        AppLayout.showToast('Server communication failure', 'error');
+      }
+    }
+  </script>
+</body>
+</html>
+

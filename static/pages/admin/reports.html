@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Institution Reports & Exports — AttendEase</title>
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/layout.css">
+</head>
+<body>
+
+  <div class="app-wrapper">
+    <aside class="sidebar" id="appSidebar"></aside>
+
+    <div class="main-wrapper">
+      <header class="top-navbar" id="topNavbar"></header>
+
+      <main class="page-container">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h1 class="h4 mb-1">Institution Attendance Reports & Exports</h1>
+            <p class="text-muted small mb-0">Stream server-generated OpenPDF reports and tabular CSV exports for academic council review.</p>
+          </div>
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="glass-card mb-4" style="padding: 1.25rem;">
+          <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-5">
+              <label class="form-label">Scope by Class Program</label>
+              <select class="form-select" id="reportClassSelect">
+                <option value="">All Academic Classes</option>
+              </select>
+            </div>
+            <div class="col-12 col-md-5">
+              <label class="form-label">Scope by Section Cohort</label>
+              <select class="form-select" id="reportSectionSelect">
+                <option value="">All Section Cohorts</option>
+              </select>
+            </div>
+            <div class="col-12 col-md-2">
+              <button type="button" class="btn btn-glass w-100" id="resetReportFilterBtn">
+                <i class="fa-solid fa-rotate-right me-1"></i> Reset
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-4">
+          <!-- Defaulters PDF Report Card -->
+          <div class="col-12 col-md-6">
+            <div class="glass-card h-100 d-flex flex-column justify-content-between">
+              <div>
+                <div class="stat-icon mb-3" style="width: 48px; height: 48px; font-size: 1.3rem;">
+                  <i class="fa-solid fa-file-pdf"></i>
+                </div>
+                <h2 class="h5 text-white mb-2">Defaulters List (Official PDF)</h2>
+                <p class="text-muted small mb-3">
+                  Comprehensive formal documentation of all students failing to satisfy the institutional attendance minimum. Formatted with institutional header, roll numbers, percentage scores, and signing blocks.
+                </p>
+                <ul class="text-muted small ps-3 mb-4">
+                  <li>Printable light-theme table layout with burgundy headers</li>
+                  <li>Directly streams OpenPDF bytes from Java service</li>
+                  <li>Includes current active regulatory threshold</li>
+                </ul>
+              </div>
+              <button type="button" class="btn btn-burgundy w-100 py-2" id="downloadPdfBtn">
+                <i class="fa-solid fa-download me-2"></i> Download Defaulters PDF
+              </button>
+            </div>
+          </div>
+
+          <!-- Defaulters CSV Export Card -->
+          <div class="col-12 col-md-6">
+            <div class="glass-card h-100 d-flex flex-column justify-content-between">
+              <div>
+                <div class="stat-icon mb-3" style="width: 48px; height: 48px; font-size: 1.3rem; background: rgba(117, 201, 163, 0.2); color: var(--success); border-color: rgba(117, 201, 163, 0.4);">
+                  <i class="fa-solid fa-file-csv"></i>
+                </div>
+                <h2 class="h5 text-white mb-2">Defaulters Dataset (CSV)</h2>
+                <p class="text-muted small mb-3">
+                  Structured comma-delimited data file for administrative import into ERP systems, spreadsheet tabulation, and parental communication workflows.
+                </p>
+                <ul class="text-muted small ps-3 mb-4">
+                  <li>Student names, roll numbers, classes, sections</li>
+                  <li>Total conducted sessions and attended session tallies</li>
+                  <li>Instant UTF-8 CSV stream from Java backend</li>
+                </ul>
+              </div>
+              <button type="button" class="btn btn-glass w-100 py-2" id="downloadCsvBtn">
+                <i class="fa-solid fa-file-excel me-2 text-success"></i> Download Defaulters CSV
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await AppLayout.init('reports', 'ADMIN');
+      await loadClasses();
+
+      document.getElementById('reportClassSelect').addEventListener('change', async (e) => {
+        await loadSections(e.target.value);
+      });
+
+      document.getElementById('downloadPdfBtn').addEventListener('click', () => {
+        triggerDownload('/api/admin/reports/defaulters/pdf');
+      });
+
+      document.getElementById('downloadCsvBtn').addEventListener('click', () => {
+        triggerDownload('/api/admin/reports/defaulters/csv');
+      });
+
+      document.getElementById('resetReportFilterBtn').addEventListener('click', () => {
+        document.getElementById('reportClassSelect').value = '';
+        document.getElementById('reportSectionSelect').innerHTML = '<option value="">All Section Cohorts</option>';
+      });
+    });
+
+    async function loadClasses() {
+      try {
+        const res = await fetch('/api/admin/classes');
+        const classes = await res.json();
+        const sel = document.getElementById('reportClassSelect');
+        classes.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = `${c.name} (${c.code})`;
+          sel.appendChild(opt);
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function loadSections(classId) {
+      const secSel = document.getElementById('reportSectionSelect');
+      if (!classId) {
+        secSel.innerHTML = '<option value="">All Section Cohorts</option>';
+        return;
+      }
+      try {
+        const res = await fetch(`/api/admin/sections?classId=${classId}`);
+        const sections = await res.json();
+        secSel.innerHTML = '<option value="">All Section Cohorts</option>' + 
+          sections.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function triggerDownload(endpoint) {
+      const classId = document.getElementById('reportClassSelect').value;
+      const sectionId = document.getElementById('reportSectionSelect').value;
+
+      const params = new URLSearchParams();
+      if (classId) params.append('classId', classId);
+      if (sectionId) params.append('sectionId', sectionId);
+
+      const url = `${endpoint}?${params.toString()}`;
+      window.location.href = url;
+    }
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Institution Grievances — AttendEase</title>
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/layout.css">
+</head>
+<body>
+
+  <div class="app-wrapper">
+    <aside class="sidebar" id="appSidebar"></aside>
+
+    <div class="main-wrapper">
+      <header class="top-navbar" id="topNavbar"></header>
+
+      <main class="page-container">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h1 class="h4 mb-1">Institution Attendance Grievances</h1>
+            <p class="text-muted small mb-0">Dean / Administrative oversight of student dispute requests and faculty adjudications.</p>
+          </div>
+        </div>
+
+        <div class="glass-table-container">
+          <div class="p-3 border-bottom border-light border-opacity-10 d-flex justify-content-between align-items-center">
+            <h2 class="h6 mb-0 text-white"><i class="fa-solid fa-scale-balanced me-2 text-muted"></i>All Student Grievances</h2>
+            <span class="text-muted small" id="grievanceCount">Loading requests...</span>
+          </div>
+          <div class="table-responsive">
+            <table class="glass-table">
+              <thead>
+                <tr>
+                  <th>Roll No</th>
+                  <th>Student Name</th>
+                  <th>Class / Section</th>
+                  <th>Course</th>
+                  <th>Session Date</th>
+                  <th>Dispute</th>
+                  <th>Reason</th>
+                  <th>Status</th>
+                  <th>Reviewer Remarks</th>
+                </tr>
+              </thead>
+              <tbody id="grievancesTableBody">
+                <tr><td colspan="9" class="text-center py-4 text-muted"><div class="skeleton-row w-75 mx-auto"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await AppLayout.init('complaints', 'ADMIN');
+      loadAllGrievances();
+    });
+
+    async function loadAllGrievances() {
+      try {
+        const res = await fetch('/api/admin/complaints');
+        if (!res.ok) throw new Error('Failed to load grievances');
+        const list = await res.json();
+
+        document.getElementById('grievanceCount').textContent = `${list.length} Total Submissions`;
+
+        const tbody = document.getElementById('grievancesTableBody');
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No attendance grievances on record.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = list.map(g => {
+          let badgeClass = 'badge-status-yellow';
+          if (g.status === 'APPROVED') badgeClass = 'badge-status-green';
+          if (g.status === 'REJECTED') badgeClass = 'badge-status-red';
+          if (g.status === 'PENDING') badgeClass = 'badge-status-info';
+
+          return `
+            <tr>
+              <td><strong class="text-white">${g.rollNo}</strong></td>
+              <td>${g.studentName}</td>
+              <td>${g.className} ${g.sectionName}</td>
+              <td>
+                <div>${g.subjectName}</div>
+                <small class="text-muted">${g.subjectCode}</small>
+              </td>
+              <td>${g.date}</td>
+              <td>
+                <span class="badge ${g.currentStatus === 'PRESENT' ? 'badge-status-green' : 'badge-status-red'}">${g.currentStatus}</span>
+                &rarr;
+                <span class="badge ${g.requestedStatus === 'PRESENT' ? 'badge-status-green' : 'badge-status-red'}">${g.requestedStatus}</span>
+              </td>
+              <td style="max-width: 220px;">
+                <div class="text-truncate" title="${g.reason}">${g.reason}</div>
+              </td>
+              <td>
+                <span class="badge ${badgeClass}">${g.status}</span>
+              </td>
+              <td>
+                <div class="small ${g.facultyRemarks ? 'text-light' : 'text-muted'}">${g.facultyRemarks || 'Pending review'}</div>
+                ${g.reviewedByName ? `<small class="text-muted">Reviewed by: ${g.reviewedByName}</small>` : ''}
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+      } catch (e) {
+        console.error(e);
+        AppLayout.showToast('Could not load grievances list', 'error');
+      }
+    }
+  </script>
+</body>
+</html>
+

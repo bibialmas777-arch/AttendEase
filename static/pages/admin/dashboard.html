@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Console — AttendEase</title>
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/layout.css">
+</head>
+<body>
+
+  <div class="app-wrapper">
+    <aside class="sidebar" id="appSidebar"></aside>
+
+    <div class="main-wrapper">
+      <header class="top-navbar" id="topNavbar"></header>
+
+      <main class="page-container">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+          <div>
+            <h1 class="h4 mb-1">Administrative Control Center</h1>
+            <p class="text-muted small mb-0">Institution-wide telemetry, threshold monitoring, and compliance oversight.</p>
+          </div>
+          <div class="d-flex gap-2">
+            <a href="/pages/admin/settings.html" class="btn btn-sm btn-glass">
+              <i class="fa-solid fa-sliders me-1"></i> Threshold (<span id="btnThresholdVal">75%</span>)
+            </a>
+            <a href="/pages/admin/reports.html" class="btn btn-sm btn-burgundy">
+              <i class="fa-solid fa-file-arrow-down me-1"></i> Defaulter Reports
+            </a>
+          </div>
+        </div>
+
+        <!-- Metric Stat Cards Grid -->
+        <div class="row g-3 mb-4">
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card h-100">
+              <div class="stat-label">
+                <span>Total Active Students</span>
+                <i class="fa-solid fa-user-graduate stat-icon"></i>
+              </div>
+              <div>
+                <div class="stat-value text-white" id="statStudents">-</div>
+                <div class="stat-subtext" id="statClasses">- Academic Classes</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card h-100">
+              <div class="stat-label">
+                <span>Faculty Members</span>
+                <i class="fa-solid fa-chalkboard-user stat-icon" style="background: rgba(233, 185, 110, 0.2); color: var(--warning); border-color: rgba(233, 185, 110, 0.4);"></i>
+              </div>
+              <div>
+                <div class="stat-value text-warning" id="statFaculty">-</div>
+                <div class="stat-subtext" id="statSubjects">- Curriculum Subjects</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card h-100">
+              <div class="stat-label">
+                <span>College Overall Attendance</span>
+                <i class="fa-solid fa-chart-line stat-icon" style="background: rgba(117, 201, 163, 0.2); color: var(--success); border-color: rgba(117, 201, 163, 0.4);"></i>
+              </div>
+              <div>
+                <div class="stat-value text-success" id="statOverallPct">-</div>
+                <div class="stat-subtext">Across all conducted sessions</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card h-100">
+              <div class="stat-label">
+                <span>Students Below Threshold</span>
+                <i class="fa-solid fa-triangle-exclamation stat-icon" style="background: rgba(240, 120, 137, 0.2); color: var(--danger); border-color: rgba(240, 120, 137, 0.4);"></i>
+              </div>
+              <div>
+                <div class="stat-value text-danger" id="statDefaulters">-</div>
+                <div class="stat-subtext" id="statDefaulterSub">Under minimum threshold</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Defaulters Preview and Audit Log -->
+        <div class="row g-4 mb-4">
+          <!-- Defaulters List -->
+          <div class="col-12 col-xl-7">
+            <div class="glass-table-container h-100">
+              <div class="p-3 border-bottom border-light border-opacity-10 d-flex justify-content-between align-items-center">
+                <h2 class="h6 mb-0 text-white"><i class="fa-solid fa-user-xmark me-2 text-danger"></i>Attendance Defaulters</h2>
+                <a href="/pages/admin/reports.html" class="btn btn-sm btn-glass text-nowrap">Full Defaulters Export</a>
+              </div>
+              <div class="table-responsive">
+                <table class="glass-table">
+                  <thead>
+                    <tr>
+                      <th>Roll No</th>
+                      <th>Student Name</th>
+                      <th>Class & Section</th>
+                      <th>Attendance</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="defaultersTableBody">
+                    <tr><td colspan="5" class="text-center py-4 text-muted"><div class="skeleton-row w-75 mx-auto"></div></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Audit Logs -->
+          <div class="col-12 col-xl-5">
+            <div class="glass-card h-100 d-flex flex-column">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h6 mb-0 text-white"><i class="fa-solid fa-shield-halved me-2 text-muted"></i>Recent Audit Trails</h2>
+                <span class="badge badge-status-info">Security</span>
+              </div>
+              <div class="flex-grow-1 overflow-auto" style="max-height: 380px;">
+                <div id="auditLogList">
+                  <div class="skeleton-row mb-2"></div>
+                  <div class="skeleton-row mb-2"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await AppLayout.init('dashboard', 'ADMIN');
+      loadAdminDashboard();
+    });
+
+    async function loadAdminDashboard() {
+      try {
+        const res = await fetch('/api/admin/dashboard');
+        if (!res.ok) throw new Error('Failed to load admin dashboard');
+        const data = await res.json();
+
+        document.getElementById('statStudents').textContent = data.totalStudents;
+        document.getElementById('statClasses').textContent = `${data.totalClasses} Academic Classes`;
+        document.getElementById('statFaculty').textContent = data.totalFaculty;
+        document.getElementById('statSubjects').textContent = `${data.totalSubjects} Curriculum Courses`;
+        document.getElementById('statOverallPct').textContent = `${data.overallAttendancePercentage.toFixed(1)}%`;
+        document.getElementById('statDefaulters').textContent = data.studentsBelowThresholdCount;
+        document.getElementById('btnThresholdVal').textContent = `${data.systemThreshold.toFixed(0)}%`;
+        document.getElementById('statDefaulterSub').textContent = `Below ${data.systemThreshold.toFixed(0)}% requirement`;
+
+        // Defaulters table
+        const tbody = document.getElementById('defaultersTableBody');
+        if (!data.defaultersSummary || data.defaultersSummary.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-success">Compliant: No students currently below threshold!</td></tr>';
+        } else {
+          tbody.innerHTML = data.defaultersSummary.slice(0, 8).map(d => `
+            <tr>
+              <td><strong class="text-white">${d.rollNo}</strong></td>
+              <td>${d.name}</td>
+              <td>${d.className} ${d.sectionName}</td>
+              <td><strong class="text-danger">${d.percentage.toFixed(1)}%</strong> <small class="text-muted">(${d.attended}/${d.conducted})</small></td>
+              <td><span class="badge badge-status-red">${d.status}</span></td>
+            </tr>
+          `).join('');
+        }
+
+        // Audit Logs
+        const auditContainer = document.getElementById('auditLogList');
+        if (!data.recentAudits || data.recentAudits.length === 0) {
+          auditContainer.innerHTML = '<div class="text-muted small text-center py-4">No audit logs recorded yet.</div>';
+        } else {
+          auditContainer.innerHTML = data.recentAudits.map(a => `
+            <div class="p-2 mb-2 rounded-2" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="badge badge-status-yellow" style="font-size: 0.68rem;">${a.action}</span>
+                <small class="text-muted" style="font-size: 0.7rem;">${new Date(a.changedAt).toLocaleDateString()} ${new Date(a.changedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</small>
+              </div>
+              <div style="font-size: 0.82rem; color: #ffffff;">${a.entity} • ${a.newValue || a.oldValue || ''}</div>
+              <small class="text-muted" style="font-size: 0.72rem;">By: ${a.changedBy}</small>
+            </div>
+          `).join('');
+        }
+
+      } catch (e) {
+        console.error(e);
+        AppLayout.showToast('Could not load administrative console', 'error');
+      }
+    }
+  </script>
+</body>
+</html>
+

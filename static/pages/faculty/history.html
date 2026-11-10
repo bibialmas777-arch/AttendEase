@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Class Attendance History — AttendEase</title>
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/layout.css">
+</head>
+<body>
+
+  <div class="app-wrapper">
+    <aside class="sidebar" id="appSidebar"></aside>
+
+    <div class="main-wrapper">
+      <header class="top-navbar" id="topNavbar"></header>
+
+      <main class="page-container">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h1 class="h4 mb-1">Class Attendance History & Edits</h1>
+            <p class="text-muted small mb-0">Review past attendance logs and perform audited corrections.</p>
+          </div>
+          <a href="/pages/faculty/mark-attendance.html" class="btn btn-burgundy btn-sm">
+            <i class="fa-solid fa-plus me-1"></i> New Session
+          </a>
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="glass-card mb-4" style="padding: 1.25rem;">
+          <form id="filterForm" class="row g-3 align-items-end">
+            <div class="col-12 col-md-4">
+              <label class="form-label">Course</label>
+              <select class="form-select" id="filterSubject">
+                <option value="">All Assigned Courses</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label">From Date</label>
+              <input type="date" class="form-control" id="filterStartDate">
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label">To Date</label>
+              <input type="date" class="form-control" id="filterEndDate">
+            </div>
+            <div class="col-12 col-md-2 d-flex gap-2">
+              <button type="submit" class="btn btn-burgundy w-100">
+                <i class="fa-solid fa-filter me-1"></i> Search
+              </button>
+              <button type="button" class="btn btn-glass" id="resetBtn">
+                <i class="fa-solid fa-rotate-right"></i>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Attendance Records Glass Table -->
+        <div class="glass-table-container">
+          <div class="p-3 border-bottom border-light border-opacity-10 d-flex justify-content-between align-items-center">
+            <h2 class="h6 mb-0 text-white"><i class="fa-solid fa-clock-rotate-left me-2 text-muted"></i>Historical Session Logs</h2>
+            <span class="text-muted small" id="recordCount">Loading records...</span>
+          </div>
+          <div class="table-responsive">
+            <table class="glass-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Roll Number</th>
+                  <th>Student Name</th>
+                  <th>Course</th>
+                  <th>Section</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="recordsTableBody">
+                <tr><td colspan="7" class="text-center py-4 text-muted"><div class="skeleton-row w-75 mx-auto"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Edit Attendance Modal -->
+  <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title h6 text-white"><i class="fa-solid fa-pen-to-square me-2 text-rose"></i>Modify Past Attendance Record</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="editAttendanceForm">
+          <div class="modal-body">
+            <input type="hidden" id="editRecordId">
+
+            <div class="p-3 mb-3 rounded-3" style="background: rgba(255, 255, 255, 0.04); border: 1px solid var(--glass-border);">
+              <div class="d-flex justify-content-between mb-1">
+                <span class="text-muted small">Student:</span>
+                <strong class="text-white" id="modalStudentName">-</strong>
+              </div>
+              <div class="d-flex justify-content-between mb-1">
+                <span class="text-muted small">Roll Number:</span>
+                <span class="text-light" id="modalRollNo">-</span>
+              </div>
+              <div class="d-flex justify-content-between mb-1">
+                <span class="text-muted small">Course:</span>
+                <span class="text-light" id="modalCourse">-</span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span class="text-muted small">Lecture Date:</span>
+                <span class="text-light" id="modalDate">-</span>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Updated Status</label>
+              <select class="form-select" id="modalNewStatus" required>
+                <option value="PRESENT">PRESENT</option>
+                <option value="ABSENT">ABSENT</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="modalEditReason">Reason for Modification (Mandatory for Audit)</label>
+              <textarea class="form-control" id="modalEditReason" rows="3" placeholder="Provide reason for retrospective modification..." required></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-glass btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-burgundy btn-sm" id="saveEditBtn">Save & Record Audit</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    let editModalInstance = null;
+    let recordsData = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await AppLayout.init('history', 'FACULTY');
+      editModalInstance = new bootstrap.Modal(document.getElementById('editModal'));
+      await loadAssignments();
+      loadRecords();
+    });
+
+    async function loadAssignments() {
+      try {
+        const res = await fetch('/api/faculty/assignments');
+        if (!res.ok) return;
+        const list = await res.json();
+        const sel = document.getElementById('filterSubject');
+        const uniqueSubjects = {};
+        list.forEach(a => {
+          if (!uniqueSubjects[a.subjectId]) {
+            uniqueSubjects[a.subjectId] = `${a.subjectName} (${a.subjectCode})`;
+            const opt = document.createElement('option');
+            opt.value = a.subjectId;
+            opt.textContent = `${a.subjectName} (${a.subjectCode})`;
+            sel.appendChild(opt);
+          }
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function loadRecords() {
+      const subjectId = document.getElementById('filterSubject').value;
+      const startDate = document.getElementById('filterStartDate').value;
+      const endDate = document.getElementById('filterEndDate').value;
+
+      const params = new URLSearchParams();
+      if (subjectId) params.append('subjectId', subjectId);
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+
+      try {
+        const res = await fetch(`/api/faculty/attendance/history?${params.toString()}`);
+        if (!res.ok) throw new Error('Failed to load records');
+        recordsData = await res.json();
+
+        document.getElementById('recordCount').textContent = `${recordsData.length} Total Records`;
+
+        const tbody = document.getElementById('recordsTableBody');
+        if (recordsData.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No attendance logs found matching filters.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = recordsData.slice(0, 100).map(r => `
+          <tr>
+            <td>${r.date}</td>
+            <td><strong class="text-white">${r.rollNo}</strong></td>
+            <td>${r.studentName}</td>
+            <td>
+              <div>${r.subjectName}</div>
+              <small class="text-muted">${r.subjectCode}</small>
+            </td>
+            <td>${r.sectionName}</td>
+            <td>
+              <span class="badge ${r.status === 'PRESENT' ? 'badge-status-green' : 'badge-status-red'}">${r.status}</span>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-glass text-nowrap" onclick="openEditModal(${r.id})">
+                <i class="fa-solid fa-pen-to-square me-1"></i> Edit
+              </button>
+            </td>
+          </tr>
+        `).join('');
+
+      } catch (e) {
+        console.error(e);
+        AppLayout.showToast('Could not load historical records', 'error');
+      }
+    }
+
+    function openEditModal(recordId) {
+      const rec = recordsData.find(r => r.id === recordId);
+      if (!rec) return;
+
+      document.getElementById('editRecordId').value = rec.id;
+      document.getElementById('modalStudentName').textContent = rec.studentName;
+      document.getElementById('modalRollNo').textContent = rec.rollNo;
+      document.getElementById('modalCourse').textContent = `${rec.subjectName} (${rec.subjectCode})`;
+      document.getElementById('modalDate').textContent = rec.date;
+      document.getElementById('modalNewStatus').value = rec.status;
+      document.getElementById('modalEditReason').value = '';
+
+      editModalInstance.show();
+    }
+
+    document.getElementById('editAttendanceForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const attendanceId = parseInt(document.getElementById('editRecordId').value);
+      const status = document.getElementById('modalNewStatus').value;
+      const reason = document.getElementById('modalEditReason').value.trim();
+
+      const btn = document.getElementById('saveEditBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
+
+      try {
+        const res = await fetch('/api/faculty/attendance/edit', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attendanceId, status, reason })
+        });
+
+        if (res.ok) {
+          AppLayout.showToast('Attendance updated and audit entry recorded', 'success');
+          editModalInstance.hide();
+          loadRecords();
+        } else {
+          const err = await res.json();
+          AppLayout.showToast(err.message || 'Update failed', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        AppLayout.showToast('Network error while updating record', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Save & Record Audit';
+      }
+    });
+
+    document.getElementById('filterForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      loadRecords();
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      document.getElementById('filterSubject').value = '';
+      document.getElementById('filterStartDate').value = '';
+      document.getElementById('filterEndDate').value = '';
+      loadRecords();
+    });
+  </script>
+</body>
+</html>
+

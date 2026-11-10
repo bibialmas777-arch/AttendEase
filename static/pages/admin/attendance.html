@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Institution Attendance Logs — AttendEase</title>
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/layout.css">
+</head>
+<body>
+
+  <div class="app-wrapper">
+    <aside class="sidebar" id="appSidebar"></aside>
+
+    <div class="main-wrapper">
+      <header class="top-navbar" id="topNavbar"></header>
+
+      <main class="page-container">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+          <div>
+            <h1 class="h4 mb-1">Institutional Attendance Log</h1>
+            <p class="text-muted small mb-0">Unified audit trail across all academic departments, classes, and sections.</p>
+          </div>
+          <a href="/pages/admin/reports.html" class="btn btn-burgundy btn-sm">
+            <i class="fa-solid fa-file-arrow-down me-1"></i> Reports & Defaulters Export
+          </a>
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="glass-card mb-4" style="padding: 1.25rem;">
+          <form id="filterForm" class="row g-3 align-items-end">
+            <div class="col-12 col-md-3">
+              <label class="form-label">Class</label>
+              <select class="form-select" id="filterClass">
+                <option value="">All Classes</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label">From Date</label>
+              <input type="date" class="form-control" id="filterStartDate">
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label">To Date</label>
+              <input type="date" class="form-control" id="filterEndDate">
+            </div>
+            <div class="col-12 col-md-3 d-flex gap-2">
+              <button type="submit" class="btn btn-burgundy w-100">
+                <i class="fa-solid fa-filter me-1"></i> Apply Filters
+              </button>
+              <button type="button" class="btn btn-glass" id="resetBtn">
+                <i class="fa-solid fa-rotate-right"></i>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Attendance Records Glass Table -->
+        <div class="glass-table-container">
+          <div class="p-3 border-bottom border-light border-opacity-10 d-flex justify-content-between align-items-center">
+            <h2 class="h6 mb-0 text-white"><i class="fa-solid fa-list-check me-2 text-muted"></i>Attendance Log Entries</h2>
+            <span class="text-muted small" id="recordCount">Loading records...</span>
+          </div>
+          <div class="table-responsive">
+            <table class="glass-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Roll No</th>
+                  <th>Student Name</th>
+                  <th>Course</th>
+                  <th>Class / Section</th>
+                  <th>Status</th>
+                  <th>Instructor</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceTableBody">
+                <tr><td colspan="7" class="text-center py-4 text-muted"><div class="skeleton-row w-75 mx-auto"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await AppLayout.init('attendance', 'ADMIN');
+      await loadClasses();
+      loadAttendance();
+    });
+
+    async function loadClasses() {
+      try {
+        const res = await fetch('/api/admin/classes');
+        const list = await res.json();
+        const sel = document.getElementById('filterClass');
+        list.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = `${c.name} (${c.code})`;
+          sel.appendChild(opt);
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function loadAttendance() {
+      const classId = document.getElementById('filterClass').value;
+      const startDate = document.getElementById('filterStartDate').value;
+      const endDate = document.getElementById('filterEndDate').value;
+
+      const params = new URLSearchParams();
+      if (classId) params.append('classId', classId);
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+
+      try {
+        const res = await fetch(`/api/admin/attendance?${params.toString()}`);
+        if (!res.ok) throw new Error('Failed to load attendance');
+        const list = await res.json();
+
+        document.getElementById('recordCount').textContent = `${list.length} Sessions Logged`;
+
+        const tbody = document.getElementById('attendanceTableBody');
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No attendance logs found matching filters.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = list.slice(0, 150).map(r => `
+          <tr>
+            <td>${r.date}</td>
+            <td><strong class="text-white">${r.rollNo}</strong></td>
+            <td>${r.studentName}</td>
+            <td>
+              <div>${r.subjectName}</div>
+              <small class="text-muted">${r.subjectCode}</small>
+            </td>
+            <td>${r.className} ${r.sectionName}</td>
+            <td>
+              <span class="badge ${r.status === 'PRESENT' ? 'badge-status-green' : 'badge-status-red'}">${r.status}</span>
+            </td>
+            <td>${r.markedByName || 'Faculty'}</td>
+          </tr>
+        `).join('');
+
+      } catch (e) {
+        console.error(e);
+        AppLayout.showToast('Could not load attendance logs', 'error');
+      }
+    }
+
+    document.getElementById('filterForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      loadAttendance();
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      document.getElementById('filterClass').value = '';
+      document.getElementById('filterStartDate').value = '';
+      document.getElementById('filterEndDate').value = '';
+      loadAttendance();
+    });
+  </script>
+</body>
+</html>
+
